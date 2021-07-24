@@ -5,13 +5,21 @@
 # 3) we can import it into your module module
 # https://stackoverflow.com/questions/458550/standard-way-to-embed-version-into-python-package
 
-__version__ = '0.6.0'
+__version__ = 'beta'
 
 release_notes = {
+    'beta':
+    """
+    - This version contains numerous untested and potentially breaking changes. Run at your own risk.
+    - PROBABLY DOESN'T WORK LMAO (rangler)
+    """,
     '0.6.0': """
     - Moved wrappers and replay converter to rlgym-tools package
     - Added the optional ability to forcefully page the spawned Rocket League instances upon creation - 416c616e
     - The path_to_rl param is no longer required for use_injector
+    """,
+    '0.5.1': """
+    - Added the optional ability to forcefully page the spawned Rocket League instances upon creation - 416c616e
     """,
     '0.5.0': """
     - Removed string based configurations in rlgym.make(), everything is passed by kwargs now - Soren
@@ -19,7 +27,7 @@ release_notes = {
     - Refactored and expanded reward functions - Rolv
     - Added replay converter - Rolv
     - Fixed TouchBallReward bug - Kevin
-    
+
     NOTE: Some of these new tools (wrappers, replay converter, etc) will be moved to a different package in the next release
     """,
     '0.4.1': """
