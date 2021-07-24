@@ -1,32 +1,41 @@
+import random
+
+from rlgym.utils.common_values import CAR_MAX_SPEED, CAR_MAX_ANG_VEL, BALL_MAX_SPEED, BALL_MAX_ANG_VEL, BALL_RADIUS, \
+    CEILING_Z, BACK_WALL_Y, CORNER_CATHETUS_LENGTH, SIDE_WALL_X
 from rlgym.utils.state_setters import StateSetter
 from rlgym.utils.state_setters import StateWrapper
-from rlgym.utils.math import rand_vec3
+from rlgym.utils.math import rand_uvec3
 import numpy as np
 from numpy import random as rand
 
-X_MAX = 7000
-Y_MAX = 9000
-Z_MAX_BALL = 1850
-Z_MAX_CAR = 1900
-PITCH_MAX = np.pi/2
+CAR_MARGIN = 100  # So no matter the rotation car will fit inside field
+X_MAX = SIDE_WALL_X - CORNER_CATHETUS_LENGTH / 2 - CAR_MARGIN
+Y_MAX = BACK_WALL_Y - CORNER_CATHETUS_LENGTH / 2 - CAR_MARGIN
+Z_MAX_BALL = CEILING_Z - BALL_RADIUS
+Z_MAX_CAR = CEILING_Z - CAR_MARGIN
+PITCH_MAX = np.pi / 2
 YAW_MAX = np.pi
 ROLL_MAX = np.pi
 
 
 class RandomState(StateSetter):
 
-    def __init__(self, ball_rand_speed: bool = False, cars_rand_speed = False, cars_on_ground: bool = True):
+    def __init__(self,
+                 ball_rand_speed_prob: float = 0.,
+                 cars_rand_speed_prob: float = 0.,
+                 cars_on_ground_prob: float = 1.
+                 ):
         """
         RandomState constructor.
 
-        :param ball_rand_speed: Boolean indicating whether the ball will have a randomly set velocity.
-        :param cars_rand_speed: Boolean indicating whether cars will have a randomly set velocity.
-        :param cars_on_ground: Boolean indicating whether cars should only be placed on the ground.
+        :param ball_rand_speed_prob: Float indicating probability that ball will have a randomly set velocity.
+        :param cars_rand_speed_prob: Float indicating probability that cars will have a randomly set velocity.
+        :param cars_on_ground_prob: Float indicating probability that cars should be placed on the ground.
         """
         super().__init__()
-        self.ball_rand_speed = ball_rand_speed
-        self.cars_rand_speed = cars_rand_speed
-        self.cars_on_ground = cars_on_ground
+        self.ball_rand_speed_prob = ball_rand_speed_prob
+        self.cars_rand_speed_prob = cars_rand_speed_prob
+        self.cars_on_ground_prob = cars_on_ground_prob
 
     def reset(self, state_wrapper: StateWrapper):
         """
@@ -34,45 +43,52 @@ class RandomState(StateSetter):
 
         :param state_wrapper: StateWrapper object to be modified with desired state values.
         """
-        self._reset_ball_random(state_wrapper, self.cars_rand_speed)
-        self._reset_cars_random(state_wrapper, self.cars_on_ground, self.ball_rand_speed)
+        self._reset_ball_random(state_wrapper, self.cars_rand_speed_prob)
+        self._reset_cars_random(state_wrapper, self.cars_on_ground_prob, self.ball_rand_speed_prob)
 
-    def _reset_ball_random(self, state_wrapper: StateWrapper, random_speed: bool):
+    def _reset_ball_random(self, state_wrapper: StateWrapper, random_speed_prob: float):
         """
         Function to set the ball to a random position.
 
         :param state_wrapper: StateWrapper object to be modified.
-        :param random_speed: Boolean indicating whether to randomize velocity values.
+        :param random_speed_prob: Boolean indicating whether to randomize velocity values.
         """
-        state_wrapper.ball.set_pos(rand.random(
-        ) * X_MAX - X_MAX/2, rand.random() * Y_MAX - Y_MAX/2, rand.random() * Z_MAX_BALL + 100)
-        if random_speed:
-            state_wrapper.ball.set_lin_vel(*rand_vec3(6000))
-            state_wrapper.ball.set_ang_vel(*rand_vec3(6))
+        state_wrapper.ball.set_pos(rand.uniform(-X_MAX, X_MAX),
+                                   rand.uniform(-Y_MAX, Y_MAX),
+                                   rand.triangular(BALL_RADIUS, BALL_RADIUS, Z_MAX_BALL))
+        if rand.random() < random_speed_prob:
+            vel = rand.triangular(0, 0, BALL_MAX_SPEED) * rand_uvec3()
+            ang_vel = rand.triangular(0, 0, BALL_MAX_ANG_VEL) * rand_uvec3()
+            state_wrapper.ball.set_lin_vel(*vel)
+            state_wrapper.ball.set_ang_vel(*ang_vel)
 
-    def _reset_cars_random(self, state_wrapper: StateWrapper, on_ground: bool, random_speed: bool):
+    def _reset_cars_random(self, state_wrapper: StateWrapper, on_ground_prob: float, random_speed_prob: float):
         """
         Function to set all cars to a random position.
 
         :param state_wrapper: StateWrapper object to be modified.
-        :param on_ground: Boolean indicating whether to place cars only on the ground.
-        :param random_speed: Boolean indicating whether to randomize velocity values.
+        :param on_ground_prob: Boolean indicating whether to place cars only on the ground.
+        :param random_speed_prob: Boolean indicating whether to randomize velocity values.
         """
         for car in state_wrapper.cars:
             # set random position and rotation for all cars based on pre-determined ranges
-            car.set_pos(rand.random() * X_MAX - X_MAX/2, rand.random()
-                        * Y_MAX - Y_MAX/2, rand.random() * Z_MAX_CAR + 150)
-            car.set_rot(rand.random() * PITCH_MAX - PITCH_MAX/2, rand.random()
-                        * YAW_MAX - YAW_MAX/2, rand.random() * ROLL_MAX - ROLL_MAX/2)
+            car.set_pos(rand.uniform(-X_MAX, X_MAX),
+                        rand.uniform(-Y_MAX, Y_MAX),
+                        rand.triangular(CAR_MARGIN, CAR_MARGIN, Z_MAX_BALL))
+            car.set_rot(random.uniform(-PITCH_MAX, PITCH_MAX),
+                        random.uniform(-YAW_MAX, ROLL_MAX),
+                        random.uniform(-ROLL_MAX, ROLL_MAX))
 
-            if random_speed:
+            if rand.random() < random_speed_prob:
                 # set random linear and angular velocity based on pre-determined ranges
-                car.set_lin_vel(*rand_vec3(2300))
-                car.set_ang_vel(*rand_vec3(5.5))
+                vel = rand.triangular(0, 0, CAR_MAX_SPEED) * rand_uvec3()
+                ang_vel = rand.triangular(0, 0, CAR_MAX_ANG_VEL) * rand_uvec3()
+                car.set_lin_vel(*vel)
+                car.set_ang_vel(*ang_vel)
 
             # 100% of cars will be set on ground if on_ground == True
             # otherwise, 50% of cars will be set on ground
-            if on_ground or rand.random() < 0.5:
+            if rand.random() < on_ground_prob:
                 # z position (up/down) is set to ground
                 car.set_pos(z=17)
                 # z linear velocity (vertical) set to 0
