@@ -67,20 +67,26 @@ class VelocityReward(RewardFunction):
 
 
 class SaveBoostReward(RewardFunction):
+    def __init__(self, exponent=0.5):
+        self.exponent = exponent
+
     def reset(self, initial_state: GameState):
         pass
 
     def get_reward(self, player: PlayerData, state: GameState, previous_action: np.ndarray) -> float:
-        # 1 reward for each frame with 100 boost, sqrt because 0->20 makes bigger difference than 80->100
-        return np.sqrt(player.boost_amount)
+        # 1 reward for each frame with 100 boost, sqrt default because 0->20 makes bigger difference than 80->100
+        return player.boost_amount ** self.exponent
 
 
 class ConstantReward(RewardFunction):
+    def __init__(self, value=1.):
+        self.value = value
+
     def reset(self, initial_state: GameState):
         pass
 
     def get_reward(self, player: PlayerData, state: GameState, previous_action: np.ndarray) -> float:
-        return 1
+        return self.value
 
 
 class AlignBallGoal(RewardFunction):
